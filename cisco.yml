@@ -1,0 +1,86 @@
+---
+
+- name: Network Getting Started First Playbook
+  gather_facts: false
+  hosts: cisco
+  connection: local
+
+
+  vars:
+    banner: "Project Automation Layer2"
+  vars_files:
+    - variable.yml
+
+  tasks:
+  # - name: "Backup Cisco Running-Config {{ ansible_host }}"
+  #   iosxr_config:
+  #      backup: yes
+  - name: "XRV9k: Gather device configuration."
+    iosxr_command:
+      commands: "show running"
+      # provider: "{{ cli_login }}"
+    register: config      
+
+  - name: "Save device configs."
+    copy:
+      content: "{{ config.stdout[0] }}"
+      dest: "{{ ansible_host }}.config.txt"
+    changed_when: false
+    ignore_errors: true
+
+
+  - name: run show version on remote devices
+    iosxr_command:
+      commands: show version
+    register: showver_output
+
+# #### Variables
+#   - name: "Configure DNS and Domain Name for {{ ansible_host }} with {{ banner }}"
+#     iosxr_config:
+#       lines:
+#          - "domain name-server {{dns_server}}"
+#          - "domain name {{ domain_name }}"
+
+  #######################################################
+
+ ## Print the output diectly on the screen
+  # - debug: msg="{{ showver_output }}"
+  # - name: getting facts from the device
+  #   iosxr_facts:
+  #    gather_subset: all
+  #   register: facts_output
+
+  # - set_fact:
+  #     conditional_ip: "{{ showver_output.stdout[0] }}"
+
+  # - debug: msg="{{ conditional_ip }}"
+  # - name: configure interface descripton
+  #   iosxr_config:
+  #     lines:
+  #       - interface Gi0/0/0/1 description 'CISCO XRv bundle {{ ansible_host }}'
+  #
+  #   when: conditional_ip.find("IOS-XRv") != -1
+
+  - name: run multiple commands and evaluate the output
+    iosxr_command:
+      commands:
+        - show version
+        - show interfaces
+    # register variable to use after on the script proccess
+    register: output_cisco
+
+  - name: Save output on FILE
+    copy:
+      ## #to check the filter format https://docs.ansible.com/ansible/latest/user_guide/playbooks_filters.html#filters-for-formatting-data
+      # content: "{{ output_cisco | to_nice_json  }}"
+      content: "{{ output_cisco | to_nice_yaml  }}"
+      dest: "{{ ansible_host }}.cisco_output_file.txt"
+
+  # - name: Generate Template for BGP configuration
+  #   template:
+  #     src: "vrf_template.j2"
+  #     dest: "bgp_iosxr.j2"
+
+  # - name: "Configure BGP on device {{ ansible_host}}"
+  #   iosxr_config:
+  #     src: bgp_iosxr.j2
